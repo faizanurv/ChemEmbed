@@ -68,6 +68,34 @@ python main.py --config config.yaml
 
 Note: If you do not specify the `--config` argument, the script will default to using `config.yaml`.
 
+
+### Run as a command line interface
+
+If you use 
+
+```bash
+pip install -r .
+```
+
+pip can install the prerequisites and create an executable script which can be run where all the settings of the config file need to be passes as arguments to the executable. 
+
+```bash
+ChemEmbed --input_file_type with_smiles 
+            --adduct + 
+            --msp_file_positive MSP_FILE_POSITIVE.msp 
+            --msp_file_negative MSP_FILE_NEGATIVE.msp 
+            --model_path_positive MODEL_PATH_POSITIVE.bin 
+            --model_path_negative MODEL_PATH_NEGATIVE.bin 
+            --reference_database REFERENCE_DATABASE.pkl
+            --intensity_threshold 1 
+            --tolerance 0.01 
+            --resolution  0.01 
+            --max_mz  700 
+            --top_n_candidates 7
+            --preprocessed_data PREPROCESSED_DATA.pkl 
+            --prediction_results PREDICTION_RESULTS.csv
+```
+
 ### Configuration of `config.yaml` File
 
 The application is configured through a `config.yaml` file, which contains several sections:
