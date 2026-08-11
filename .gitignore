@@ -16,3 +16,6 @@ venv/
 data/
 *.zip
 *.tar.gz
+
+# Local, machine-specific config (copy chemembed_config.example.yml instead)
+chemembed_config.yml

@@ -4,7 +4,7 @@
 msp_file_positive: 'input_spectra.msp'  # or 'input_spectra.msp' if you don't have SMILES   ('input_spectra_with_smile.msp')
 msp_file_negative: 'sample_negative_file_without_smile.msp' # sample_negative_file_without_smile.msp if you dont have SMILES sample_negative_file.msp
 
-reference_database: 'sample_reference_database.pkl'  # Path to your reference database
+reference_database: 'sample_reference_database.pkl'  # Path to your reference database (.pkl or .parquet)
 
 
 model_path_positive: 'model.mol2vec_ints_nl_ddb_0_01_up_wo_dup_bin'  # Path to your trained model
@@ -24,3 +24,7 @@ top_n_candidates: 5     # Number of top candidates to retrieve
 # Input type
 input_file_type: 'without_smiles'  # Options: 'with_smiles', 'without_smiles'
 adduct: '+' # Options: '-' for M-H and '+' for M+H
+
+batch_size: 32    # increase to 64/128 if GPU has memory
+num_workers: 4    # parallel data loading
+faiss_k: 200      # increase if fallback count is high

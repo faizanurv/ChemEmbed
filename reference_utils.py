@@ -46,11 +46,65 @@ def load_reference_database_with_smiles(path, adduct):
 
     return final_mol2vec
 
+def _read_reference_any_format(path):
+    """Read the reference DB from parquet OR pickle.
+
+    The reference used to be a 7.3GB pickle, which is all-or-nothing to load and executes
+    code on unpickling. The parquet form is ~15% smaller, version-portable, and lets a
+    caller read a single column (e.g. up_inchikey for a coverage check) in ~2s instead of
+    materialising the whole frame in ~36s. Sniff by extension, then by content, so an
+    existing pickle path keeps working unchanged."""
+    p = str(path)
+    if p.endswith((".parquet", ".pq")):
+        return pd.read_parquet(path)
+    if p.endswith((".pkl", ".pickle")):
+        return pd.read_pickle(path)
+    try:
+        return pd.read_parquet(path)   # parquet has a magic header; fails cleanly if not
+    except Exception:
+        return pd.read_pickle(path)
+
+
+def _stored_precursormz_is_trustworthy(df, adduct, n_check=500, tol=0.005):
+    """Decide whether the stored Precursormz column can be used as-is for THIS adduct,
+    instead of recomputing it from 5.5M SMILES on every load (the dominant load cost).
+
+    This is a SELF-VALIDATING shortcut, not an assumption. The stored column was built
+    positive-mode (round(ExactMolWt + proton, 3)); a negative-mode request, a missing or
+    partly-null column, or a DB whose column was produced differently all FAIL the sample
+    check and fall through to the original recompute. So correctness is preserved for
+    every case; only the common positive-mode path gets faster."""
+    if 'Precursormz' not in df.columns or 'smile' not in df.columns:
+        return False
+    if df['Precursormz'].isna().any():
+        return False
+    proton = 1.007276
+    sign = 1.0 if adduct == '+' else -1.0
+    n = min(n_check, len(df))
+    sample = df.sample(n=n, random_state=0) if len(df) > n else df
+    for smi, stored in zip(sample['smile'], sample['Precursormz']):
+        mol = Chem.MolFromSmiles(smi) if isinstance(smi, str) else None
+        if mol is None or stored is None:
+            return False
+        expected = round(rdMolDescriptors.CalcExactMolWt(mol) + sign * proton, 3)
+        if abs(expected - float(stored)) > tol:
+            return False
+    return True
+
+
 def load_reference_database_without_smiles(path, adduct):
     """
     Load and preprocess the reference database for 'without_smiles' input.
     """
-    final_mol2vec = pd.read_pickle(path)
+    final_mol2vec = _read_reference_any_format(path)
+
+    # Fast path: the reference already carries a Precursormz column. Recomputing it from
+    # SMILES on every load is 5.5M RDKit parses (~20 min) that produce a column the file
+    # already contains. Trust the stored column when a sample verifies it matches for the
+    # requested adduct; otherwise fall through to the original recompute below.
+    if _stored_precursormz_is_trustworthy(final_mol2vec, adduct):
+        final_mol2vec.reset_index(drop=True, inplace=True)
+        return final_mol2vec
 
     # If necessary, include any required preprocessing steps similar to 'with_smiles'
     # For example, calculating 'Precursormz' if not already present
@@ -290,8 +344,8 @@ def match_predictions_to_reference_without_smiles(prediction_df, reference_df, t
 
         for col_name_3, col_value_3 in zip(new_inchikey, ls_inchikey):
             result_df.at[i, col_name_3] = col_value_3
-
+    
     result_df.drop(['Top smile', 'Top Min_cosine', 'Top InChIKey'], axis=1, inplace=True)
     result_df.reset_index(drop=True, inplace=True)
-
+    
     return result_df

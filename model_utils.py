@@ -11,7 +11,7 @@ def load_model(model_path):
     Load the trained model.
     """
     model_cnn = up_cnn_model.CNN_Class()
-    model_cnn.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+    model_cnn.load_state_dict(torch.load(model_path, map_location=torch.device('cpu'), weights_only=True))
     model_cnn.eval()
     return model_cnn
 

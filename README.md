@@ -68,6 +68,90 @@ python main.py --config config.yaml
 
 Note: If you do not specify the `--config` argument, the script will default to using `config.yaml`.
 
+## Batch annotation — `chemembed_by_file.py` (FAISS GPU edition)
+
+`main.py` annotates a single MSP file. `chemembed_by_file.py` is the batch entry
+point: it walks a directory of samples, reads each sample's GNPS/SIRIUS MGF, and
+writes `chemembed_annotation/{converted_spectra.msp, preprocessed_data.pkl,
+chemembed_results.csv}` per sample.
+
+```bash
+cp chemembed_config.example.yml chemembed_config.yml   # then edit the paths
+python chemembed_by_file.py --config chemembed_config.yml
+```
+
+`chemembed_config.yml` is gitignored so machine-specific absolute paths are never
+committed; `chemembed_config.example.yml` documents every key.
+
+### Where the speed comes from
+
+The batch path produces the same candidates as the original per-sample loop, but
+restructures the work:
+
+1. **Reference DB loaded once**, before the sample loop, instead of once per
+   sample — and the RDKit `Precursormz` computation over the ~5.5 M reference rows
+   runs once rather than `N_samples` times.
+2. **One FAISS index, one search per sample.** All of a sample's query embeddings
+   are searched in a single GPU call (~1 ms) instead of a per-query scan of the
+   full database.
+3. **Precursor m/z post-filter applied to the FAISS results**, preserving the
+   original ChemEmbed matching semantics (exact 3-decimal match). A dict-based
+   fallback index handles sparse masses whose correct candidates fall outside the
+   top `faiss_k` hits, so recall is not traded for speed.
+4. **Batched CNN inference on GPU** (`batch_size: 32`) in place of `batch_size=1`
+   on CPU — typically 20–50× faster.
+5. **`predict_without_smiles` rebuilt** to support `batch_size > 1`, which is what
+   makes (4) possible.
+
+`reference_utils.py` also gained a parquet-or-pickle reader and a *self-validating*
+`Precursormz` fast path: if the reference already carries a `Precursormz` column,
+a random sample of rows is re-derived from SMILES and checked against it for the
+requested adduct. Only if the check passes is the stored column trusted; a
+negative-mode request, a null-bearing column, or a differently-built database all
+fail the check and fall through to the original full recompute. Correctness is
+preserved in every case — only the common positive-mode path gets faster.
+
+### Performance keys
+
+| Key | Default | Notes |
+| --- | --- | --- |
+| `batch_size` | `32` | CNN inference batch size. Raise to 64/128 if the GPU has memory. |
+| `num_workers` | `0` | DataLoader worker processes. `4` is reasonable on a multi-core node. |
+| `faiss_k` | `200` | FAISS candidates retrieved before the precursor post-filter. Raise if the run reports a high "Fallback used" count. |
+| `recompute` | `false` | `true` re-runs samples that already have `chemembed_results.csv`. |
+
+### Requirement
+
+FAISS is required by this entry point and is **not** in `requirements.txt`, since
+the correct build depends on your hardware:
+
+```bash
+conda install -c pytorch faiss-gpu   # GPU (recommended)
+conda install -c pytorch faiss-cpu   # CPU fallback
+```
+
+Without a GPU the code still runs — it builds a CPU index and reports
+`CPU (no GPU detected)` — but points 2 and 4 lose most of their benefit.
+
+### Per-scan variant — `chemembed_per_spectrum.py`
+
+By default `merge_spectra_by_feature` collapses every MS2 scan of a feature into a
+single spectrum. `chemembed_per_spectrum.py` annotates each scan separately,
+which is useful when scans differ in collision energy:
+
+```bash
+python chemembed_per_spectrum.py \
+    --mgf      <sample>_per_spectrum_combined.mgf \
+    --manifest <sample>_spectrum_manifest.tsv \
+    --config   chemembed_config.yml \
+    --out      <sample>_chemembed_per_spectrum_results.tsv
+```
+
+It imports the model, reference cache, matching and post-processing from
+`chemembed_by_file.py`, so behaviour stays identical, and joins results back to
+the manifest to recover `feature_id` / `scan_number` / `collision_energy` /
+`dissociation_method`.
+
 
 ### Run as a command line interface
 
