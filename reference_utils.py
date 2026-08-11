@@ -332,7 +332,14 @@ def match_predictions_to_reference_without_smiles(prediction_df, reference_df, t
     new_inchikey = [f'Top_{i+1}_InChIKey' for i in range(top_n)]
     new_columns = new_EU + new_smile + new_inchikey
 
-    for col_name in new_columns:
+    #for col_name in new_columns:
+    #    result_df[col_name] = None
+
+    for col_name in new_EU:
+        result_df[col_name] = nan
+    for col_name in new_smile:
+        result_df[col_name] = "NA"
+    for col_name in new_inchikey:
         result_df[col_name] = "NA"
 
     for i in range(len(result_df)):
