@@ -2,6 +2,7 @@
 
 import pandas as pd
 import numpy as np
+from math import nan
 from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors
 from rdkit import DataStructs
@@ -234,10 +235,13 @@ def match_predictions_to_reference_with_smiles(prediction_df, reference_df, top_
     new_EU = [f'Top_{i+1}_cosine' for i in range(top_n)]
     new_smile = [f'Top_{i+1}_SMILE' for i in range(top_n)]
     new_tanimoto = [f'Top_{i+1}_Tanimoto' for i in range(top_n)]
-    new_columns = new_EU + new_smile + new_tanimoto
-
-    for col_name in new_columns:
+    
+    for col_name in new_EU:
+        result_df[col_name] = nan
+    for col_name in new_smile:
         result_df[col_name] = "NA"
+    for col_name in new_tanimoto:
+        result_df[col_name] = nan
 
     for i in range(len(result_df)):
         ls_smile = result_df['Top smile'].iloc[i]
