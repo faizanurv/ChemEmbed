@@ -56,7 +56,7 @@ def main():
     parser.add_argument('--top_n_candidates', type=int, default =5, help='Top N candidates.')
 
     # outputs
-    parser.add_argument('--preprocessed_data', type=str, default='preprocessed_data.pkl',  help='Path to save preprocessed data as pkl file.')
+    parser.add_argument('--preprocessed_data', type=str, default='preprocessed_data.pkl', help='Path to save preprocessed data as pkl file.')
     parser.add_argument('--prediction_results', type=str, default='prediction_results.csv', help='Path to save prediction results as csv file.')
 
     args = parser.parse_args()
