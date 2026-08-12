@@ -27,7 +27,7 @@ dependencies = [
 ChemEmbed = "cli:main"
 
 [tool.setuptools]
-py-modules = ["cli", "data_processing", "model_utils", "reference_utils"]
+py-modules = ["cli", "data_processing", "model_utils", "reference_utils", "chemembed_single_file"]
 
 [tool.setuptools.packages.find]
 where = ["."]
