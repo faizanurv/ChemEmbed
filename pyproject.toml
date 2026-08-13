@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A deep learning framework for metabolite identification using enhanced MS/MS data and multidimensional molecular embeddings"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.6"
+requires-python = ">=3.9"
 authors = [
     { name = "Muhammad Faizan Khan" }
 ]
@@ -18,13 +18,13 @@ dependencies = [
     "pandas>=1.0.0",
     "scipy>=1.4.0",
     "torch>=1.5.0",
-    "torchvision>=0.21.0",
+    "torchvision",
     "pyYAML>=5.3.0",
     "rdkit >=2020.09.1",
 ]
 
 [project.scripts]
-ChemEmbed = "cli:main"
+chemembed = "cli:main"
 
 [tool.setuptools]
 py-modules = ["cli", "data_processing", "model_utils", "reference_utils", "chemembed_single_file"]
