@@ -158,7 +158,7 @@ the manifest to recover `feature_id` / `scan_number` / `collision_energy` /
 If you use 
 
 ```bash
-pip install -r .
+pip install .
 ```
 
 pip can install the prerequisites and create an executable script which can be run where all the settings of the config file need to be passes as arguments to the executable. 
