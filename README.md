@@ -164,7 +164,7 @@ pip install -r .
 pip can install the prerequisites and create an executable script which can be run where all the settings of the config file need to be passes as arguments to the executable. 
 
 ```bash
-ChemEmbed --input_file_type with_smiles \
+chemembed --input_file_type with_smiles \
             --adduct "+" \
             --msp_file_positive MSP_FILE_POSITIVE.msp \
             --msp_file_negative MSP_FILE_NEGATIVE.msp \
