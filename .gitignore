@@ -5,6 +5,10 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
+
+# Build artifacts (never commit these; rebuild before every release)
+dist/
+build/
 .ipynb_checkpoints/
 
 # Virtual env & IDE
