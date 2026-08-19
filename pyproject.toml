@@ -13,6 +13,29 @@ authors = [
     { name = "Muhammad Faizan Khan" }
 ]
 
+keywords = [
+    "mass-spectrometry",
+    "metabolomics",
+    "metabolite-identification",
+    "molecular-embeddings",
+    "deep-learning",
+    "MS/MS",
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
 dependencies = [
     "numpy>=1.18.0",
     "pandas>=1.0.0",
@@ -22,6 +45,11 @@ dependencies = [
     "rdkit >=2020.09.1",
     "tqdm>=4.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/faizanurv/ChemEmbed"
+Repository = "https://github.com/faizanurv/ChemEmbed"
+Issues = "https://github.com/faizanurv/ChemEmbed/issues"
 
 [project.scripts]
 chemembed = "cli:main"

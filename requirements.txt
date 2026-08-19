@@ -1,7 +1,13 @@
+# Runtime dependencies, kept in sync with [project.dependencies] in pyproject.toml.
+# Preferred install is `pip install .` — this file is for a plain source checkout.
+#
+# NOTE: faiss is required by chemembed_by_file.py but deliberately not listed,
+# because the correct build depends on your hardware. See the README:
+#   conda install -c pytorch faiss-gpu   (or faiss-cpu)
 pandas
 numpy
 PyYAML
 scipy
 rdkit
-torch
-torchvision
+torch>=1.13.0
+tqdm
