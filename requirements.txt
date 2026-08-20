@@ -11,3 +11,4 @@ scipy
 rdkit
 torch>=1.13.0
 tqdm
+pyarrow
