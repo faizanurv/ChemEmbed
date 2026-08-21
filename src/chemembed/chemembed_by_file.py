@@ -78,7 +78,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
         cfg = yaml.load(f, Loader=yaml.FullLoader)
 
     required = [
-        "treated_data_path", "ionization", "chemembed_root",
+        "treated_data_path", "ionization",
         "model_path_positive", "model_path_negative", "reference_database",
     ]
     missing = [k for k in required if k not in cfg or not cfg[k]]
@@ -99,7 +99,9 @@ def load_config(config_path: str) -> Dict[str, Any]:
     cfg.setdefault("num_workers",         0)    # DataLoader workers
     cfg.setdefault("faiss_k",             200)  # FAISS candidates before precursor filter
 
-    root = cfg["chemembed_root"]
+    # chemembed_root is vestigial: the modules now ship inside this package
+    # and are imported directly. Still honoured so existing configs keep working.
+    root = cfg.get("chemembed_root")
     if root and root not in sys.path:
         sys.path.insert(0, root)
 
@@ -382,11 +384,11 @@ def load_reference_cache(reference_database: str, adduct: str,
         )
 
     try:
-        from reference_utils import load_reference_database_without_smiles
+        from .reference_utils import load_reference_database_without_smiles
     except ModuleNotFoundError as exc:
         raise ModuleNotFoundError(
             f"ChemEmbed import failed: {exc}\n"
-            "Check that chemembed_root in config points to the ChemEmbed repo."
+            "The ChemEmbed package appears to be installed incompletely."
         )
 
     # ── Load raw reference DataFrame ─────────────────────────────────────────
@@ -778,17 +780,17 @@ def run_chemembed(
     device    : torch device (cuda or cpu)
     """
     try:
-        from data_processing import (
+        from .data_processing import (
             msp_to_dataframe_without_smiles,
             preprocess_spectra_without_smiles,
             process_data_without_smiles,
         )
-        from model_utils import load_model
-        from data_loaders import spectra_inference_dataset_loader as data_loader_module
+        from .model_utils import load_model
+        from .data_loaders import spectra_inference_dataset_loader as data_loader_module
     except ModuleNotFoundError as exc:
         raise ModuleNotFoundError(
             f"ChemEmbed import failed: {exc}\n"
-            "Check that chemembed_root in config points to the ChemEmbed repo."
+            "The ChemEmbed package appears to be installed incompletely."
         )
 
     adduct = cfg["adduct"]

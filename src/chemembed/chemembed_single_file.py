@@ -1,7 +1,7 @@
 from torch.utils.data import DataLoader
 
 # Import functions from our modules
-from data_processing import (
+from .data_processing import (
     msp_to_dataframe_with_smiles,
     msp_to_dataframe_without_smiles,
     preprocess_spectra_with_smiles,
@@ -10,13 +10,13 @@ from data_processing import (
     process_data_without_smiles
 )
 
-from model_utils import (
+from .model_utils import (
     load_model,
     predict_with_smiles,
     predict_without_smiles
 )
 
-from reference_utils import (
+from .reference_utils import (
     load_reference_database_with_smiles,
     load_reference_database_without_smiles,
     match_predictions_to_reference_with_smiles,
@@ -38,7 +38,7 @@ def run(config: dict):
         norm_df = preprocess_spectra_with_smiles(msp_df, config['intensity_threshold'])
         final_up = process_data_with_smiles(norm_df, config['tolerance'], config['resolution'], config['max_mz'])
         final_up.to_pickle(config['preprocessed_data'])
-        from data_loaders import inference_dataset_loader as data_loader_module
+        from .data_loaders import inference_dataset_loader as data_loader_module
         test_dataset = data_loader_module.class_ls(config['preprocessed_data'])
         predict_fn = predict_with_smiles
         reference_loader_fn = load_reference_database_with_smiles
@@ -52,7 +52,7 @@ def run(config: dict):
         norm_df = preprocess_spectra_without_smiles(msp_df, config['intensity_threshold'])
         final_up = process_data_without_smiles(norm_df, config['tolerance'], config['resolution'], config['max_mz'])
         final_up.to_pickle(config['preprocessed_data'])
-        from data_loaders import spectra_inference_dataset_loader as data_loader_module
+        from .data_loaders import spectra_inference_dataset_loader as data_loader_module
         test_dataset = data_loader_module.class_ls(config['preprocessed_data'])
         predict_fn = predict_without_smiles
         reference_loader_fn = load_reference_database_without_smiles

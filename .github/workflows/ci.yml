@@ -39,11 +39,13 @@ jobs:
           import glob, sys, zipfile
           names = zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist()
           required = [
-              'cli.py', 'chemembed_single_file.py', 'chemembed_by_file.py',
-              'model_utils.py', 'reference_utils.py', 'data_processing.py',
-              'cnn_train/up_cnn_model.py',
-              'data_loaders/spectra_inference_dataset_loader.py',
-              'data_loaders/inference_dataset_loader.py',
+              'chemembed/__init__.py',
+              'chemembed/cli.py', 'chemembed/chemembed_single_file.py',
+              'chemembed/chemembed_by_file.py', 'chemembed/model_utils.py',
+              'chemembed/reference_utils.py', 'chemembed/data_processing.py',
+              'chemembed/cnn_train/up_cnn_model.py',
+              'chemembed/data_loaders/spectra_inference_dataset_loader.py',
+              'chemembed/data_loaders/inference_dataset_loader.py',
           ]
           missing = [r for r in required if r not in names]
           for r in required:
@@ -94,10 +96,12 @@ jobs:
           cd "${{ runner.temp }}"
           python - <<'PY'
           import importlib
-          for m in ["cli", "chemembed_single_file", "chemembed_by_file",
-                    "model_utils", "reference_utils", "data_processing",
-                    "cnn_train.up_cnn_model",
-                    "data_loaders.spectra_inference_dataset_loader"]:
+          for m in ["chemembed", "chemembed.cli",
+                    "chemembed.chemembed_single_file",
+                    "chemembed.chemembed_by_file", "chemembed.model_utils",
+                    "chemembed.reference_utils", "chemembed.data_processing",
+                    "chemembed.cnn_train.up_cnn_model",
+                    "chemembed.data_loaders.spectra_inference_dataset_loader"]:
               importlib.import_module(m)
               print("  ok", m)
           PY
@@ -105,5 +109,7 @@ jobs:
       - name: Console script is installed
         run: chemembed --help
 
+      # src/ layout: nothing importable sits at the checkout root, so these
+      # necessarily exercise the installed package rather than the working copy.
       - name: Regression tests
         run: pytest tests/ -v

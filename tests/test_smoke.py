@@ -18,7 +18,7 @@ import pytest
 # so the column could not be joined on. Fixed in 1.0.1.
 # --------------------------------------------------------------------------
 def test_unbatch_unwraps_collated_strings():
-    from model_utils import _unbatch
+    from chemembed.model_utils import _unbatch
 
     assert _unbatch(["ABC"]) == "ABC"
     assert _unbatch(("ABC",)) == "ABC"
@@ -26,7 +26,7 @@ def test_unbatch_unwraps_collated_strings():
 
 
 def test_unbatch_leaves_real_sequences_alone():
-    from model_utils import _unbatch
+    from chemembed.model_utils import _unbatch
 
     assert _unbatch(["A", "B"]) == ["A", "B"]
     assert _unbatch([]) == []
@@ -71,7 +71,7 @@ MSP = textwrap.dedent(
 
 
 def test_msp_parser_reads_both_spectra(tmp_path):
-    from data_processing import msp_to_dataframe_without_smiles
+    from chemembed.data_processing import msp_to_dataframe_without_smiles
 
     p = tmp_path / "spectra.msp"
     p.write_text(MSP)
@@ -96,7 +96,7 @@ def test_msp_parser_reads_both_spectra(tmp_path):
 )
 def test_cli_accepts_single_polarity(adduct, msp_flag, model_flag, tmp_path):
     r = subprocess.run(
-        [sys.executable, "-m", "cli",
+        [sys.executable, "-m", "chemembed.cli",
          "--input_file_type", "without_smiles", "--adduct", adduct,
          msp_flag, str(tmp_path / "missing.msp"),
          model_flag, str(tmp_path / "missing.bin"),
@@ -113,7 +113,7 @@ def test_cli_accepts_single_polarity(adduct, msp_flag, model_flag, tmp_path):
 def test_cli_reports_missing_file_for_chosen_polarity(tmp_path):
     """Omitting the flag the chosen adduct needs must fail clearly, not silently."""
     r = subprocess.run(
-        [sys.executable, "-m", "cli",
+        [sys.executable, "-m", "chemembed.cli",
          "--input_file_type", "without_smiles", "--adduct", "+",
          "--reference_database", str(tmp_path / "missing.pkl")],
         capture_output=True, text=True,
@@ -126,7 +126,7 @@ def test_cli_reports_missing_file_for_chosen_polarity(tmp_path):
 # The reference reader must accept parquet and pickle, sniffing by extension.
 # --------------------------------------------------------------------------
 def test_reference_reader_roundtrips_pickle(tmp_path):
-    from reference_utils import _read_reference_any_format
+    from chemembed.reference_utils import _read_reference_any_format
 
     df = pd.DataFrame({
         "smile": ["CCO", "CCN"],
@@ -142,7 +142,23 @@ def test_reference_reader_roundtrips_pickle(tmp_path):
 
 def test_stored_precursormz_is_rejected_when_wrong():
     """The fast path must validate, not assume: a bogus column has to fail."""
-    from reference_utils import _stored_precursormz_is_trustworthy
+    from chemembed.reference_utils import _stored_precursormz_is_trustworthy
 
     bad = pd.DataFrame({"smile": ["CCO", "CCN"], "Precursormz": [1.0, 2.0]})
     assert _stored_precursormz_is_trustworthy(bad, "+") is False
+
+
+# --------------------------------------------------------------------------
+# Under the flat layout there was no importable `chemembed` module at all,
+# despite that being the install name. The src/ layout fixes that.
+# --------------------------------------------------------------------------
+def test_package_is_importable_under_its_install_name():
+    import chemembed
+
+    assert hasattr(chemembed, "__version__")
+
+
+def test_public_entry_point_is_reachable_from_the_package():
+    import chemembed
+
+    assert callable(chemembed.run)

@@ -1,7 +1,7 @@
 # cli.py
 
 import argparse
-from chemembed_single_file import run
+from .chemembed_single_file import run
 
 
 def main():

@@ -12,11 +12,11 @@ from torch.utils.data import DataLoader
 from rdkit import Chem, DataStructs
 from rdkit.Chem import rdMolDescriptors
 
-from dataset import class_ls
-from model_cnn import CNN_Class
+from .dataset import class_ls
+from .model_dnn import DNN_Class
 from numpy.linalg import norm
 # Import functions from our modules
-from data_preprocessing import (
+from ..data_preprocessing import (
     msp_to_dataframe_with_smiles,
     preprocess_spectra_with_smiles,
     process_data_with_smiles
@@ -40,28 +40,45 @@ def main():
     test_dataset = class_ls(final_up)
     test_loader = DataLoader(dataset=test_dataset, batch_size=1, drop_last=True, shuffle=False, num_workers=0)
 
-    model_cnn = CNN_Class()
-    model_cnn.load_state_dict(torch.load(args.model, map_location=torch.device('cpu')))
+    # Initialize model for CPU
+    model_dnn = DNN_Class(input_dim=70000, output_dim=300)
+
+    # Load state dict with map_location to ensure it loads onto CPU
+    model_dnn.load_state_dict(
+        torch.load(args.model,
+                   map_location=torch.device('cpu')))
+
+    # Ensure model is on CPU
+    model_dnn.to(torch.device('cpu'))
 
     with torch.no_grad():
-        model_cnn.eval()
-        df = pd.DataFrame(columns=('Ground smile', 'tree_out','len_frag','inchikey'))
+        model_dnn.eval()
+
+        df = pd.DataFrame(columns=['Ground smile', 'tree_out', 'len_frag', 'inchikey'])
         count = 0
+
         for inputs in test_loader:
             inputs01 = inputs[0]
             label1 = inputs[2]
             coo = inputs[3]
             ik = inputs[4]
-            outputs1 = model_cnn(inputs01)
+
+            # ---------- Flatten for DNN ----------
+            inputs01 = inputs01.view(inputs01.size(0), -1)
+
+            outputs1 = model_dnn(inputs01)
             tree_out = outputs1.detach().cpu().numpy()
             coo = coo.detach().numpy().item()
+
             df.loc[count] = [label1[0], tree_out, coo, ik[0]]
             count += 1
-        df.to_pickle('chemberta_final_results_negative.pkl')
+
+        df.to_pickle('final_test_results_mol2vec.pkl')
 
     # === Part 2: Ranking & Top-K Calculation ===
     final_mol2vec = pd.read_pickle(args.mol2vec)
-    g_sm = final_mol2vec['smiles'].tolist()
+
+    g_sm = final_mol2vec['smile'].tolist()
     pr_mass = []
     mol_form_mv = []
 
@@ -81,7 +98,7 @@ def main():
     final_mol2vec['Precursormz'] = pr_mass
     final_mol2vec['Molecular_Formula'] = mol_form_mv
 
-    data_test = pd.read_pickle('chemberta_final_results_negative.pkl')
+    data_test = pd.read_pickle('final_test_results_mol2vec.pkl')
     data_test.reset_index(drop=True, inplace=True)
     g_sm_ls = data_test['Ground smile'].tolist()
     pr_mass = []
@@ -115,11 +132,11 @@ def main():
         ls_tani = []
         ls_pre_sm = []
         for j in range(len(new_df)):
-            array2 = np.array(new_df['cls_embedding'].iloc[j])
+            array2 = np.array(new_df['up_molvec'].iloc[j])
             euclidean_distance = np.dot(ls_1[i], array2) / (norm(ls_1[i]) * norm(array2))
             ls_eu.append(euclidean_distance.item())
             mol = Chem.MolFromSmiles(data_test['Ground smile'].iloc[i])
-            mol_1 = Chem.MolFromSmiles(new_df['smiles'].iloc[j])
+            mol_1 = Chem.MolFromSmiles(new_df['smile'].iloc[j])
             fp1 = Chem.RDKFingerprint(mol)
             fp2 = Chem.RDKFingerprint(mol_1)
             score = DataStructs.TanimotoSimilarity(fp1, fp2)
@@ -135,7 +152,7 @@ def main():
         for rank in range(1, 6):
             if len(new_df) >= rank and new_df['Tanimoto'].iloc[rank-1] >= 0.95:
                 top_counts[rank] += 1
-                ls_g_sm[rank].append(new_df['smiles'].iloc[rank-1])
+                ls_g_sm[rank].append(new_df['smile'].iloc[rank-1])
                 ls_p_tani[rank].append(new_df['Tanimoto'].iloc[rank-1])
                 ls_pre_eu[rank].append(new_df['cosine'].iloc[rank-1])
                 if rank == 1:
@@ -146,7 +163,7 @@ def main():
                 break
         if not placed and len(new_df) > 0:
             top_counts[11] += 1
-            ls_g_sm[11].append(new_df['smiles'].iloc[0])
+            ls_g_sm[11].append(new_df['smile'].iloc[0])
             ls_p_tani[11].append(new_df['Tanimoto'].iloc[0])
             ls_pre_eu[11].append(new_df['cosine'].iloc[0])
             counts_list[11].append(len(new_df))

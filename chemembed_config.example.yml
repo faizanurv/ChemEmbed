@@ -15,9 +15,10 @@ treated_data_path: /path/to/results
 ionization: pos            # 'pos' or 'neg'
 
 # ── ChemEmbed installation ───────────────────────────────────────────────────
-# Directory containing model_utils.py / reference_utils.py / data_processing.py.
-# Prepended to sys.path at startup.
-chemembed_root: /path/to/ChemEmbed/ChemEmbed
+# Optional, and no longer needed: the modules ship inside the installed
+# `chemembed` package and are imported directly. Kept for backwards
+# compatibility — if set, the path is still prepended to sys.path.
+# chemembed_root: /path/to/ChemEmbed/src
 
 # ── Model paths ──────────────────────────────────────────────────────────────
 model_path_positive: /path/to/data_model_files/model_positive.bin

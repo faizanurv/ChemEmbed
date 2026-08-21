@@ -36,14 +36,9 @@ from pathlib import Path
 
 import pandas as pd
 
-# Make sibling chemembed_by_file importable regardless of CWD.
-_HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-
 import torch  # noqa: E402
 
-from chemembed_by_file import (  # noqa: E402
+from chemembed.chemembed_by_file import (  # noqa: E402
     load_config,
     load_reference_cache,
     parse_mgf,
