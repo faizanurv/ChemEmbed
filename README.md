@@ -51,7 +51,7 @@ redirect pip's scratch space, e.g. `export TMPDIR=/path/with/space`.
 
 ChemEmbed needs two model files and one reference database, none of which are
 part of the Python package. Download them from the
-[v1.0.0 release](https://github.com/faizanurv/ChemEmbed/releases/tag/v1.0.0):
+[v1.0.0 release](https://github.com/faizanurv/ChemEmbed/releases/tag/v1.0.1):
 
 | File | Size | Purpose |
 | --- | --- | --- |
