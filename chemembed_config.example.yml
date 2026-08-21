@@ -20,14 +20,14 @@ ionization: pos            # 'pos' or 'neg'
 chemembed_root: /path/to/ChemEmbed/ChemEmbed
 
 # ── Model paths ──────────────────────────────────────────────────────────────
-model_path_positive: /path/to/data_model_files/Trained_ChemEmbed_Model_Only_Positive_Mode.mol2vec_ints_nl_ddb_0_01_up_wo_dup_bin
-model_path_negative: /path/to/data_model_files/Trained_ChemEmbed_Model_Only_Negative_Mode.mol2vec_ddb_0_01_up_wo_dup_M-H_ints_nl_bin
+model_path_positive: /path/to/data_model_files/model_positive.bin
+model_path_negative: /path/to/data_model_files/model_negative.bin
 
 # ── Reference database ───────────────────────────────────────────────────────
 # Accepts either .pkl/.pickle or .parquet — the format is sniffed by extension and
 # then by content, so an existing pickle path keeps working unchanged. Parquet is
 # smaller, version-portable and allows single-column reads.
-reference_database: /path/to/data_model_files/final_mol2vec_300_dimension.parquet
+reference_database: /path/to/data_model_files/chemembed_reference_mol2vec_300d_520k.parquet
 
 # ── Processing parameters ────────────────────────────────────────────────────
 tolerance: 0.01
