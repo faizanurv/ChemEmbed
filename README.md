@@ -50,9 +50,8 @@ redirect pip's scratch space, e.g. `export TMPDIR=/path/with/space`.
 ### Models and reference database
 
 ChemEmbed needs two model files and one reference database, none of which are
-part of the Python package. Download
-them from the
-[latest release](https://github.com/faizanurv/ChemEmbed/releases/latest):
+part of the Python package. Download them from the
+[v1.0.0 release](https://github.com/faizanurv/ChemEmbed/releases/tag/v1.0.0):
 
 | File | Size | Purpose |
 | --- | --- | --- |
@@ -75,6 +74,10 @@ curl -LO $BASE/model_positive.bin
 curl -LO $BASE/model_negative.bin
 curl -LO $BASE/chemembed_reference_mol2vec_300d_520k.parquet   # or the .pkl
 ```
+
+These files are published once and reused by later releases, so a code-only
+release carries no assets of its own — always take them from v1.0.0 unless a
+later release says otherwise.
 
 Verify the downloads before use:
 
