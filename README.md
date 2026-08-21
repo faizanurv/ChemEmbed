@@ -27,36 +27,94 @@ Before running the pipeline, ensure that all dependencies are installed and prop
 
 ### Installation
 
-**Clone this repository to your local machine**:
+```bash
+pip install chemembed
+```
+
+That installs the code and its Python dependencies. The trained models and the
+reference database are distributed separately because of their size — see
+**Models and reference database** below.
+
+To install from source instead:
 
 ```bash
-git clone https://github.com/massspecdl/ChemEmbed.git
+git clone https://github.com/faizanurv/ChemEmbed.git
 cd ChemEmbed
+pip install .
 ```
 
-**Create a virtual environment (optional but recommended)**:
+Note that `pip install chemembed` pulls in PyTorch, which together with its CUDA
+libraries occupies roughly 5 GB. On a machine with a small `/tmp` you may need to
+redirect pip's scratch space, e.g. `export TMPDIR=/path/with/space`.
+
+### Models and reference database
+
+ChemEmbed needs two model files and one reference database, none of which are
+part of the Python package. Download
+them from the
+[latest release](https://github.com/faizanurv/ChemEmbed/releases/latest):
+
+| File | Size | Purpose |
+| --- | --- | --- |
+| `model_positive.bin` | 1129.6 MB | CNN weights, positive mode (`[M+H]+`) |
+| `model_negative.bin` | 1129.6 MB | CNN weights, negative mode (`[M-H]-`) |
+| `chemembed_reference_mol2vec_300d_520k.pkl` | 705.6 MB | 520,083 compounds, 300-dim mol2vec embeddings |
+| `chemembed_reference_mol2vec_300d_520k.parquet` | 542.5 MB | the same database as parquet (optional, needs `pyarrow`) |
+
+You need one reference database, not both. The parquet is smaller and safer to
+load — `pandas.read_pickle` executes code while unpickling, so a parquet file is
+preferable for anything downloaded over the network. It requires `pyarrow`
+(`pip install pyarrow`), which the package does not install by default. If you
+would rather not add that dependency, use the `.pkl`; both contain identical
+data.
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+mkdir -p data_model_files && cd data_model_files
+BASE=https://github.com/faizanurv/ChemEmbed/releases/download/v1.0.0
+curl -LO $BASE/model_positive.bin
+curl -LO $BASE/model_negative.bin
+curl -LO $BASE/chemembed_reference_mol2vec_300d_520k.parquet   # or the .pkl
 ```
 
-**Install required dependencies**:
+Verify the downloads before use:
+
+```
+b376f329f1b3759e598c9e1fd2e6b252d9f63ed2316baaff3b57be387b0b8c73  model_positive.bin
+8165286689322aef9c0486fe470bdafd68162adb9a644d8477810ce8f9fb51ad  model_negative.bin
+6ddf348aa6be45db7f5122468b8814c410cbfe87d5b8befc22bc990bc8c561f0  chemembed_reference_mol2vec_300d_520k.pkl
+41a88ef1c84e3f0bec2babfb6cac8941ae4fc37168622a94676a3e9c6c753df0  chemembed_reference_mol2vec_300d_520k.parquet
+```
 
 ```bash
-pip install -r requirements.txt
+sha256sum -c <<< "b376f329f1b3759e598c9e1fd2e6b252d9f63ed2316baaff3b57be387b0b8c73  model_positive.bin"
 ```
 
-**Download data and model from this link**:
+The reference database is a parquet conversion of `Supplementary File 2.pkl`
+from the Zenodo deposit, DOI
+[10.5281/zenodo.14778518](https://doi.org/10.5281/zenodo.14778518) (CC-BY-4.0).
+Embeddings, SMILES, InChIKeys and precursor masses are unchanged.
+
+**Scope.** The reference database covers 520,083 compounds. Candidate matching
+can only return molecules that are in the database, so a compound outside it
+cannot be identified regardless of spectral quality, and results obtained with a
+differently sized reference are not directly comparable.
+
+### Quick check
 
 ```bash
-pip install gdown
-gdown https://drive.google.com/drive/folders/1GEAiTPPTUsLJxYYOr2zVuAm_74LyAwAw?usp=sharing --folder
-unzip Data_and_model_folder.zip
-Put all files in folder where you put all codes
+chemembed --input_file_type without_smiles \
+          --adduct "+" \
+          --msp_file_positive your_spectra.msp \
+          --model_path_positive data_model_files/model_positive.bin \
+          --reference_database data_model_files/chemembed_reference_mol2vec_300d_520k.parquet \
+          --top_n_candidates 5 \
+          --prediction_results results.csv
 ```
 
-Note: If a `requirements.txt` file is not present, install the dependencies individually (see Dependencies).
+Only the flags for the polarity you select are required: with `--adduct "+"` you
+need `--msp_file_positive` and `--model_path_positive`, and the negative-mode
+equivalents may be omitted.
+
 
 ### How to Run
 
@@ -89,7 +147,7 @@ The batch path produces the same candidates as the original per-sample loop, but
 restructures the work:
 
 1. **Reference DB loaded once**, before the sample loop, instead of once per
-   sample — and the RDKit `Precursormz` computation over the ~5.5 M reference rows
+   sample — and the RDKit `Precursormz` computation over every reference row
    runs once rather than `N_samples` times.
 2. **One FAISS index, one search per sample.** All of a sample's query embeddings
    are searched in a single GPU call (~1 ms) instead of a per-query scan of the
