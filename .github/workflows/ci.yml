@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # Packaging checks. These are fast because nothing is installed, and they
+  # cover the failure mode that source-tree testing cannot see: a package that
+  # builds but omits a module, or declares metadata it cannot satisfy.
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade pip build twine
+
+      # Builds with the setuptools floor declared in pyproject.toml. A floor
+      # that is too low for the metadata it uses fails right here.
+      - name: Build
+        run: python -m build
+
+      - name: Validate metadata for the index
+        run: python -m twine check dist/*
+
+      # chemembed_by_file was once absent from the wheel while present in the
+      # repo, so an installed copy silently lost the FAISS batch path.
+      - name: Wheel contains the expected modules
+        run: |
+          python - <<'PY'
+          import glob, sys, zipfile
+          names = zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist()
+          required = [
+              'cli.py', 'chemembed_single_file.py', 'chemembed_by_file.py',
+              'model_utils.py', 'reference_utils.py', 'data_processing.py',
+              'cnn_train/up_cnn_model.py',
+              'data_loaders/spectra_inference_dataset_loader.py',
+              'data_loaders/inference_dataset_loader.py',
+          ]
+          missing = [r for r in required if r not in names]
+          for r in required:
+              print(('  ok   ' if r not in missing else '  MISS ') + r)
+          if missing:
+              sys.exit(f"missing from wheel: {missing}")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  # Install and exercise the built package on every Python version the
+  # metadata claims to support. An unsatisfiable requires-python, or a missing
+  # runtime dependency, shows up here and nowhere else.
+  test:
+    needs: package
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      # CPU-only torch: the CUDA wheels are several GB and add nothing here.
+      - name: Install CPU torch
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install the built wheel
+        run: pip install dist/*.whl pytest
+
+      # Import from a directory that is not the checkout, so the source tree
+      # cannot satisfy an import the package failed to include.
+      - name: Import from a neutral working directory
+        run: |
+          cd "${{ runner.temp }}"
+          python - <<'PY'
+          import importlib
+          for m in ["cli", "chemembed_single_file", "chemembed_by_file",
+                    "model_utils", "reference_utils", "data_processing",
+                    "cnn_train.up_cnn_model",
+                    "data_loaders.spectra_inference_dataset_loader"]:
+              importlib.import_module(m)
+              print("  ok", m)
+          PY
+
+      - name: Console script is installed
+        run: chemembed --help
+
+      - name: Regression tests
+        run: pytest tests/ -v

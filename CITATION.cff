@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use ChemEmbed in your research, please cite it as below."
+title: "ChemEmbed: A deep learning framework for metabolite identification using enhanced MS/MS data and multidimensional molecular embeddings"
+abstract: >-
+  ChemEmbed identifies metabolites from MS/MS spectra by predicting a
+  multidimensional molecular embedding with a convolutional neural network and
+  matching it against a reference database of pre-computed embeddings by cosine
+  similarity.
+type: software
+authors:
+  - family-names: Khan
+    given-names: Muhammad Faizan
+version: 1.0.1
+date-released: 2026-08-21
+license: MIT
+repository-code: "https://github.com/faizanurv/ChemEmbed"
+url: "https://github.com/faizanurv/ChemEmbed"
+keywords:
+  - mass spectrometry
+  - metabolomics
+  - metabolite identification
+  - molecular embeddings
+  - deep learning
+references:
+  - type: data
+    title: "ChemEmbed: models, reference database and supplementary data"
+    authors:
+      - family-names: Khan
+        given-names: Muhammad Faizan
+    doi: "10.5281/zenodo.14778518"
+    url: "https://doi.org/10.5281/zenodo.14778518"
+    license: CC-BY-4.0
