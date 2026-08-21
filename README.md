@@ -51,7 +51,7 @@ redirect pip's scratch space, e.g. `export TMPDIR=/path/with/space`.
 
 ChemEmbed needs two model files and one reference database, none of which are
 part of the Python package. Download them from the
-[v1.0.0 release](https://github.com/faizanurv/ChemEmbed/releases/tag/v1.0.1):
+[latest release](https://github.com/faizanurv/ChemEmbed/releases/latest):
 
 | File | Size | Purpose |
 | --- | --- | --- |
@@ -69,15 +69,14 @@ data.
 
 ```bash
 mkdir -p data_model_files && cd data_model_files
-BASE=https://github.com/faizanurv/ChemEmbed/releases/download/v1.0.0
+BASE=https://github.com/faizanurv/ChemEmbed/releases/latest/download
 curl -LO $BASE/model_positive.bin
 curl -LO $BASE/model_negative.bin
 curl -LO $BASE/chemembed_reference_mol2vec_300d_520k.parquet   # or the .pkl
 ```
 
-These files are published once and reused by later releases, so a code-only
-release carries no assets of its own — always take them from v1.0.0 unless a
-later release says otherwise.
+The `releases/latest/download/` URLs above always resolve to the newest
+release, so they keep working when the files are re-attached to a later tag.
 
 Verify the downloads before use:
 
