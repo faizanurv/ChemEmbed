@@ -2,11 +2,30 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # Working branches are built too, so a branch is verified before it ever
+    # becomes a pull request. main and tags are listed explicitly rather than
+    # using '**' so that a push to a branch which already has a PR open does
+    # not run the same checks twice.
+    branches:
+      - main
+      - 'feature/**'
+      - 'refactor/**'
+      - 'fix/**'
     tags: ['v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+# The workflow only reads the repository and uploads a build artifact.
+permissions:
+  contents: read
+
+# A new push supersedes the run already in flight for the same ref. Runs on
+# main are allowed to finish, so the default branch keeps an unbroken record
+# of what passed.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # Packaging checks. These are fast because nothing is installed, and they
