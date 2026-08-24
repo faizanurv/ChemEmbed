@@ -162,3 +162,34 @@ def test_public_entry_point_is_reachable_from_the_package():
     import chemembed
 
     assert callable(chemembed.run)
+
+
+# --------------------------------------------------------------------------
+# The version was declared in three places and drifted: 1.1.1 shipped with
+# __init__.py still saying "1.1.0". __version__ now comes from the installed
+# distribution metadata, so it cannot disagree with pyproject.toml.
+# --------------------------------------------------------------------------
+def test_version_matches_the_installed_distribution():
+    from importlib.metadata import version
+
+    import chemembed
+
+    assert chemembed.__version__ == version("chemembed")
+
+
+def test_citation_file_version_matches_the_package(tmp_path):
+    """CITATION.cff carries its own version field and has to be bumped in step."""
+    import pathlib
+    import re
+
+    root = pathlib.Path(__file__).resolve().parent.parent
+    cff = root / "CITATION.cff"
+    pyproject = root / "pyproject.toml"
+    if not cff.exists() or not pyproject.exists():
+        pytest.skip("running against an installed package, not a source checkout")
+
+    cff_version = re.search(r"^version:\s*(\S+)", cff.read_text(), re.M).group(1)
+    proj_version = re.search(r'^version\s*=\s*"([^"]+)"', pyproject.read_text(), re.M).group(1)
+    assert cff_version == proj_version, (
+        f"CITATION.cff says {cff_version}, pyproject.toml says {proj_version}"
+    )

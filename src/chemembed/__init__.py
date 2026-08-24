@@ -8,7 +8,15 @@ The trained models and the reference database are distributed separately from
 this package because of their size; see the README for download instructions.
 """
 
-__version__ = "1.1.0"
+from importlib.metadata import PackageNotFoundError, version as _version
+
+try:
+    # Read from the installed distribution rather than hardcoding, so the
+    # version is declared once, in pyproject.toml. A literal here had already
+    # gone stale: 1.1.1 shipped reporting __version__ == "1.1.0".
+    __version__ = _version("chemembed")
+except PackageNotFoundError:  # running from a source tree, not installed
+    __version__ = "0.0.0.dev0"
 
 __all__ = ["run", "__version__"]
 
