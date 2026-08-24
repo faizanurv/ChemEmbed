@@ -4,7 +4,7 @@ import torch
 import pandas as pd
 
 # Assuming you have your model class defined somewhere, e.g., up_cnn_model.py
-from cnn_train import up_cnn_model
+from .cnn_train import up_cnn_model
 
 def load_model(model_path):
     """

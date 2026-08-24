@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ChemEmbed"
-version = "1.0.1"
+version = "1.1.0"
 description = "A deep learning framework for metabolite identification using enhanced MS/MS data and multidimensional molecular embeddings"
 readme = "README.md"
 license = "MIT"
@@ -52,11 +52,7 @@ Repository = "https://github.com/faizanurv/ChemEmbed"
 Issues = "https://github.com/faizanurv/ChemEmbed/issues"
 
 [project.scripts]
-chemembed = "cli:main"
-
-[tool.setuptools]
-py-modules = ["cli", "data_processing", "model_utils", "reference_utils",
-              "chemembed_single_file", "chemembed_by_file"]
+chemembed = "chemembed.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]

@@ -1,7 +1,7 @@
 # main.py
 import yaml
 import argparse
-from chemembed_single_file import run
+from chemembed.chemembed_single_file import run
 
 def load_config(config_path):
     with open(config_path, 'r') as file:

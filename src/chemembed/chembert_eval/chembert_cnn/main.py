@@ -12,11 +12,11 @@ from torch.utils.data import DataLoader
 from rdkit import Chem, DataStructs
 from rdkit.Chem import rdMolDescriptors
 
-from dataset import class_ls
-from model_dnn import DNN_Class
+from .dataset import class_ls
+from .model_cnn import CNN_Class
 from numpy.linalg import norm
 # Import functions from our modules
-from data_preprocessing import (
+from ..data_preprocessing import (
     msp_to_dataframe_with_smiles,
     preprocess_spectra_with_smiles,
     process_data_with_smiles
@@ -40,40 +40,24 @@ def main():
     test_dataset = class_ls(final_up)
     test_loader = DataLoader(dataset=test_dataset, batch_size=1, drop_last=True, shuffle=False, num_workers=0)
 
-    # Initialize model for CPU
-    model_dnn = DNN_Class(input_dim=70000, output_dim=384)
-
-    # Load state dict with map_location to ensure it loads onto CPU
-    model_dnn.load_state_dict(
-        torch.load(args.model,
-                   map_location=torch.device('cpu')))
-
-    # Ensure model is on CPU
-    model_dnn.to(torch.device('cpu'))
+    model_cnn = CNN_Class()
+    model_cnn.load_state_dict(torch.load(args.model, map_location=torch.device('cpu')))
 
     with torch.no_grad():
-        model_dnn.eval()
-
-        df = pd.DataFrame(columns=['Ground smile', 'tree_out', 'len_frag', 'inchikey'])
+        model_cnn.eval()
+        df = pd.DataFrame(columns=('Ground smile', 'tree_out','len_frag','inchikey'))
         count = 0
-
         for inputs in test_loader:
             inputs01 = inputs[0]
             label1 = inputs[2]
             coo = inputs[3]
             ik = inputs[4]
-
-            # ---------- Flatten for DNN ----------
-            inputs01 = inputs01.view(inputs01.size(0), -1)
-
-            outputs1 = model_dnn(inputs01)
+            outputs1 = model_cnn(inputs01)
             tree_out = outputs1.detach().cpu().numpy()
             coo = coo.detach().numpy().item()
-
             df.loc[count] = [label1[0], tree_out, coo, ik[0]]
             count += 1
-
-        df.to_pickle('final_test_results.pkl')
+        df.to_pickle('chemberta_final_results_negative.pkl')
 
     # === Part 2: Ranking & Top-K Calculation ===
     final_mol2vec = pd.read_pickle(args.mol2vec)
@@ -97,7 +81,7 @@ def main():
     final_mol2vec['Precursormz'] = pr_mass
     final_mol2vec['Molecular_Formula'] = mol_form_mv
 
-    data_test = pd.read_pickle('final_test_results.pkl')
+    data_test = pd.read_pickle('chemberta_final_results_negative.pkl')
     data_test.reset_index(drop=True, inplace=True)
     g_sm_ls = data_test['Ground smile'].tolist()
     pr_mass = []

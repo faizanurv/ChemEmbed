@@ -137,7 +137,7 @@ chemembed_results.csv}` per sample.
 
 ```bash
 cp chemembed_config.example.yml chemembed_config.yml   # then edit the paths
-python chemembed_by_file.py --config chemembed_config.yml
+python -m chemembed.chemembed_by_file --config chemembed_config.yml
 ```
 
 `chemembed_config.yml` is gitignored so machine-specific absolute paths are never
@@ -366,23 +366,30 @@ Ensure the `cnn_train` module is present in your project and contains `up_cnn_mo
 ### Project Structure
 
 ```
-spectra2moleculeCombine/
-├── data_processing.py                  # Functions related to data preprocessing
-├── model_utils.py                      # Functions related to model loading and prediction
-├── reference_utils.py                  # Functions related to reference database processing
-├── main.py                             # Main script to run the pipeline
-├── config.yaml                         # Configuration file
-├── data_loaders/                       # Directory containing data loader modules
-│   ├── __init__.py
-│   ├── inference_dataset_loader.py          # For 'with_smiles' input type
-│   └── spectra_inference_dataset_loader.py  # For 'without_smiles' input type
-├── cnn_train/                          # Directory containing custom model modules
-│   ├── __init__.py
-│   └── up_cnn_model.py
-├── input_spectra.msp                   # Input spectra file
-├── sample_reference_database.pkl       # Reference database file
-├── requirements.txt                    # List of required Python packages
-└── README.md                           # Project documentation
+ChemEmbed/
+├── pyproject.toml                      # Package metadata and dependencies
+├── LICENSE
+├── README.md
+├── config.yaml                         # Configuration for main.py
+├── chemembed_config.example.yml        # Template for the batch entry point
+├── main.py                             # Single-file run, reads config.yaml
+├── chemembed_per_spectrum.py           # Per-scan variant (not packaged)
+├── tests/                              # Regression tests
+└── src/
+    └── chemembed/                      # The installed package
+        ├── __init__.py
+        ├── cli.py                      # Command-line interface
+        ├── chemembed_single_file.py    # Shared run() used by main.py and cli.py
+        ├── chemembed_by_file.py        # Batch annotation, FAISS candidate search
+        ├── data_processing.py          # Spectra preprocessing
+        ├── model_utils.py              # Model loading and prediction
+        ├── reference_utils.py          # Reference database loading and matching
+        ├── cnn_train/
+        │   └── up_cnn_model.py
+        ├── data_loaders/
+        │   ├── inference_dataset_loader.py          # 'with_smiles'
+        │   └── spectra_inference_dataset_loader.py  # 'without_smiles'
+        └── chembert_eval/              # ChemBERTa comparison used in the paper
 ```
 
 ### Additional Information
