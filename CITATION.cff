@@ -10,8 +10,8 @@ type: software
 authors:
   - family-names: Khan
     given-names: Muhammad Faizan
-version: 1.1.1
-date-released: 2026-08-24
+version: 1.2.0
+date-released: 2026-08-25
 license: MIT
 repository-code: "https://github.com/faizanurv/ChemEmbed"
 url: "https://github.com/faizanurv/ChemEmbed"

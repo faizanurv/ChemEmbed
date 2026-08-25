@@ -7,7 +7,7 @@ All notable changes to ChemEmbed are recorded here. The format follows
 Release notes on GitHub are generated from the entry for the version being released,
 so this file is the single source for what changed.
 
-## [1.2.0] - Unreleased
+## [1.2.0] - 2026-08-25
 
 ### Fixed
 

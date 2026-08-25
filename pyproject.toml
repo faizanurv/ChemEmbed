@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ChemEmbed"
-version = "1.1.1"
+version = "1.2.0"
 description = "A deep learning framework for metabolite identification using enhanced MS/MS data and multidimensional molecular embeddings"
 readme = "README.md"
 license = "MIT"
