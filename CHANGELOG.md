@@ -29,6 +29,21 @@ so this file is the single source for what changed.
   already present in the stored `Precursormz` column, which at m/z 200 would otherwise
   consume half of a 5 ppm tolerance.
 
+  Measured on 500 MassSpecGym `[M+H]+` spectra, scored against the published
+  520,083-compound reference, with every spectrum's true structure confirmed present in
+  that reference so any miss is a retrieval failure rather than a coverage limit:
+
+  | | exact 3-dp bucket | ±5 ppm window |
+  | --- | --- | --- |
+  | Spectra returning any candidate | 317 / 500 (63.4%) | 499 / 500 (99.8%) |
+  | Hit@1 | 0.220 | **0.306** |
+  | Hit@5 | 0.398 | **0.680** |
+  | Hit@20 | 0.488 | **0.884** |
+
+  For 183 of 500 answerable spectra the old filter retrieved nothing at all, and before
+  the row-loss fix below those 183 would have been absent from the results file
+  entirely — a 317-row CSV for a 500-spectrum run, with no error.
+
 - **Spectra with no candidate are no longer dropped from the results.** They previously
   vanished from the output CSV with no row, no warning and no error, so a run over
   1,000 spectra could return 300 rows and appear to have succeeded. Every input
