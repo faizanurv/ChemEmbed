@@ -50,6 +50,8 @@ import yaml
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from .reference_utils import REFERENCE_MZ_QUANTISATION
+
 
 # ==============================================================================
 # CLI
@@ -94,6 +96,9 @@ def load_config(config_path: str) -> Dict[str, Any]:
     cfg.setdefault("resolution",          0.01)
     cfg.setdefault("intensity_threshold", 1)
     cfg.setdefault("top_n_candidates",    5)
+    # Non-zero by default: 0 selects the legacy exact 3-dp bucket, which discards roughly
+    # half of all correct candidates. Set to 0 only to reproduce pre-1.2.0 results.
+    cfg.setdefault("precursor_tolerance_ppm", 5.0)
     cfg.setdefault("recompute",           False)
     cfg.setdefault("batch_size",          32)   # CNN batch size
     cfg.setdefault("num_workers",         0)    # DataLoader workers
@@ -620,6 +625,7 @@ def match_with_faiss(
     final_inchikey = []
     final_smile    = []
     n_fallback     = 0
+    n_unmatched    = 0
 
     for i in range(Q):
         uid  = _unwrap_uid(data_test["Unique_ID"].iloc[i])
@@ -630,7 +636,11 @@ def match_with_faiss(
 
         if use_tol:
             qx   = query_exact[i]
-            da   = qx * tol_ppm / 1e6
+            # prec_exact is NOT exact: it comes from the reference's Precursormz column,
+            # which is stored as round(mass, 3). That quantisation is worth up to
+            # 0.0005 Da, which at m/z 200 is half of a 5 ppm window, so widen by it
+            # rather than let the stored rounding consume the user's tolerance.
+            da   = qx * tol_ppm / 1e6 + REFERENCE_MZ_QUANTISATION
             mask = valid & (np.abs(prec_exact[cand_idx] - qx) <= da)
         else:
             mask = valid & (prec_trunc[cand_idx] == query_trunc[i])
@@ -654,6 +664,14 @@ def match_with_faiss(
                 hi   = np.searchsorted(prec_exact_sorted, query_exact[i] + da, side="right")
                 rows = exact_order[lo:hi]                              # original row indices
                 if len(rows) == 0:
+                    # No reference within the window. Emit an empty-candidate row rather
+                    # than dropping the spectrum: a silently shorter output CSV is
+                    # indistinguishable from a successful run.
+                    n_unmatched += 1
+                    final_uid.append(uid)
+                    final_cosine.append([])
+                    final_inchikey.append([])
+                    final_smile.append([])
                     continue
                 emb_g   = all_emb[rows]                                # (N, D) gather
                 sc      = emb_g @ Q_mat[i]
@@ -671,6 +689,11 @@ def match_with_faiss(
             else:
                 group = fallback.get(query_trunc[i])
                 if group is None:
+                    n_unmatched += 1
+                    final_uid.append(uid)
+                    final_cosine.append([])
+                    final_inchikey.append([])
+                    final_smile.append([])
                     continue
                 emb_g  = group["emb_norm"]                             # (N_group, D)
                 sc     = emb_g @ Q_mat[i]
@@ -693,6 +716,8 @@ def match_with_faiss(
     if n_fallback > 0:
         print(f"    [match] Fallback used: {n_fallback}/{Q} queries "
               f"(consider increasing faiss_k from current={faiss_k})")
+    print(f"    [match] {Q} spectra processed, {Q - n_unmatched} matched, "
+          f"{n_unmatched} with no reference within the precursor tolerance")
 
     # ── Assemble results DataFrame (same column format as original ChemEmbed) ─
     rows = []

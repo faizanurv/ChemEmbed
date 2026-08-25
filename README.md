@@ -119,6 +119,33 @@ Only the flags for the polarity you select are required: with `--adduct "+"` you
 need `--msp_file_positive` and `--model_path_positive`, and the negative-mode
 equivalents may be omitted.
 
+### Precursor mass tolerance
+
+Candidate retrieval keeps every reference compound whose precursor mass is within
+`--precursor_tolerance_ppm` of the measured precursor. **This is the single most
+important parameter for recall.**
+
+| Value | Use |
+| --- | --- |
+| `5` (default) | Orbitrap and other high-resolution instruments |
+| `10`–`20` | QTOF |
+| `0` | Legacy exact 3-decimal bucket — see below |
+
+Setting `0` restores the filter used up to version 1.1.1, in which reference and query
+masses were each reduced to three decimals and compared for equality. It is retained
+only so earlier results can be reproduced, and should not be used for new work: the
+reference was rounded while the query was truncated, so the comparison failed whenever
+the fourth decimal digit was 5 or above — **about half of all compounds, even when the
+query mass was exact.** A three-decimal bucket is also a ±0.0005 Da window, roughly
+1.2 ppm at m/z 400, narrower than the mass accuracy of any real instrument.
+
+Note that `--tolerance` is a *peak binning* parameter and has no effect on candidate
+retrieval.
+
+Spectra with no reference inside the window are reported with `NA` candidates rather
+than being omitted, so the results file always has one row per input spectrum. The run
+prints how many spectra went unmatched.
+
 
 ### How to Run
 
@@ -184,16 +211,41 @@ preserved in every case — only the common positive-mode path gets faster.
 
 ### Requirement
 
-FAISS is required by this entry point and is **not** in `requirements.txt`, since
-the correct build depends on your hardware:
+FAISS is required by this entry point only. Install it as an extra, or from conda if
+you have a GPU:
 
 ```bash
-conda install -c pytorch faiss-gpu   # GPU (recommended)
-conda install -c pytorch faiss-cpu   # CPU fallback
+pip install chemembed[faiss]         # CPU build, from PyPI
+conda install -c pytorch faiss-gpu   # GPU build (recommended on a GPU node)
 ```
 
 Without a GPU the code still runs — it builds a CPU index and reports
 `CPU (no GPU detected)` — but points 2 and 4 lose most of their benefit.
+
+### Why the single-file path does not use FAISS
+
+The two entry points order the work differently, and the difference is not an
+oversight.
+
+`chemembed_by_file.py` searches the **embedding** space first with FAISS, then filters
+the hits by precursor mass. That is worth a GPU index because one search call covers
+every spectrum in a sample at once.
+
+The single-file path filters by **precursor mass** first, using a sorted mass array and
+a binary search. Over a 520,083-row reference a ±5 ppm window returns a mean of 5
+candidates (99th percentile 12), so the remaining cosine computation costs about 10 µs.
+Retrieval and scoring together run in roughly 14 µs per spectrum — less than the
+overhead of a single FAISS query — while a FAISS index over the same database costs
+seconds to build and hundreds of megabytes to hold. Adding it there would make the
+default path slower, not faster, and would turn a pure-Python dependency set into one
+requiring conda on most machines.
+
+One property worth preserving if the batch path is ever tuned: filtering by mass
+*after* an embedding search is exact **only because `IndexFlatIP` is a brute-force
+index**. Any reference within the mass window that is not in the FAISS top-k must have
+scored below every hit that was returned, so it cannot belong in the top-n. Swapping in
+an approximate index (IVF, HNSW, PQ) breaks that guarantee and can silently drop the
+correct answer.
 
 ### Per-scan variant — `chemembed_per_spectrum.py`
 

@@ -1,0 +1,101 @@
+
+# Automatic GitHub release on a version commit.
+#
+# Why this exists: tags and releases had drifted apart. v1.1.0 and v1.1.1 were tagged
+# and published to PyPI, but neither ever got a GitHub release, so the repository's
+# Releases page still advertised v1.0.1 as current while PyPI shipped 1.1.1. Cutting
+# releases by hand is what let that happen; this makes the release a consequence of the
+# commit rather than a separate step someone has to remember.
+#
+# Trigger: a push to main whose commit message is exactly `Release: <version>`, e.g.
+#
+#     git commit -m "Release: 1.2.0"
+#
+# The tag (v1.2.0) and the release are created from the CHANGELOG.md entry for that
+# version, so the release notes and the changelog cannot disagree.
+#
+# ---------------------------------------------------------------------------
+# IMPORTANT — read before enabling.
+#
+# This action has no `make_latest` input, so every release it creates becomes
+# `releases/latest`. The four data assets (models + reference database, 3.3 GB) live on
+# the v1.0.1 release and are NOT re-attached to code releases. That is safe only
+# because README.md pins its download URLs to `releases/download/v1.0.1` rather than
+# `releases/latest/download/`. If anyone reintroduces a `releases/latest` URL, the next
+# automatic release will break every download link. Do not.
+#
+# The action is third-party, last released in February 2021, and needs `contents:
+# write`. It is therefore pinned to a commit SHA rather than a moving tag, so a
+# compromised or retagged upstream cannot silently gain write access to this repository.
+# ---------------------------------------------------------------------------
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# Creating a release and a tag requires write access to repository contents. Nothing
+# else is granted.
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false      # never abandon a half-created release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Cheap pre-filter so the job is skipped entirely for ordinary commits.
+    if: startsWith(github.event.head_commit.message, 'Release:')
+    steps:
+      - uses: actions/checkout@v4
+
+      # Catches the failure mode that a release cannot: shipping a release whose
+      # version does not match the code being released. pyproject.toml, CITATION.cff and
+      # the commit message all have to agree before anything is published.
+      - name: Versions must agree before releasing
+        run: |
+          python - <<'PY'
+          import os, re, sys, pathlib
+
+          message = os.environ["COMMIT_MESSAGE"].strip().splitlines()[0]
+          claimed = re.match(r"Release:\s*v?(\S+)", message).group(1)
+
+          proj = re.search(r'^version\s*=\s*"([^"]+)"',
+                           pathlib.Path("pyproject.toml").read_text(), re.M).group(1)
+          cff = re.search(r"^version:\s*(\S+)",
+                          pathlib.Path("CITATION.cff").read_text(), re.M).group(1)
+
+          changelog = pathlib.Path("CHANGELOG.md").read_text()
+          in_changelog = f"## [{claimed}]" in changelog
+
+          print(f"  commit message : {claimed}")
+          print(f"  pyproject.toml : {proj}")
+          print(f"  CITATION.cff   : {cff}")
+          print(f"  in CHANGELOG   : {in_changelog}")
+
+          problems = []
+          if proj != claimed:
+              problems.append(f"pyproject.toml says {proj}, commit says {claimed}")
+          if cff != claimed:
+              problems.append(f"CITATION.cff says {cff}, commit says {claimed}")
+          if not in_changelog:
+              problems.append(f"CHANGELOG.md has no '## [{claimed}]' entry")
+          if problems:
+              sys.exit("refusing to release:\n  - " + "\n  - ".join(problems))
+          PY
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+
+      # https://github.com/marketplace/actions/auto-release
+      # CupOfTea696/gh-action-auto-release@v1.0.2, pinned to its commit SHA.
+      - name: Create the release
+        uses: CupOfTea696/gh-action-auto-release@a8f57f49a805d334ac7abe31b689e7ea24e1ee40
+        with:
+          title: "ChemEmbed $version"
+          tag: "v$semver"
+          draft: false
+          regex: '/^Release: #{semver}$/i'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

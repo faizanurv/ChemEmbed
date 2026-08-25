@@ -15,11 +15,16 @@ preprocessed_data: 'preprocessed_data_withSmile3.pkl'  # Path to save preprocess
 prediction_results: 'prediction_results_withSmile3.csv'  # Path to save prediction results
 
 # Parameters
-tolerance: 0.01
+tolerance: 0.01         # peak binning tolerance in Da (NOT the precursor tolerance)
 max_mz: 700
 resolution: 0.01
 intensity_threshold: 1  # in percentage
 top_n_candidates: 5     # Number of top candidates to retrieve
+
+# Precursor mass tolerance for candidate retrieval, in ppm.
+# 5 for Orbitrap, 10-20 for QTOF. 0 selects the legacy exact 3-decimal bucket, which
+# misses about half of all correct candidates; use it only to reproduce old results.
+precursor_tolerance_ppm: 5.0
 
 # Input type
 input_file_type: 'without_smiles'  # Options: 'with_smiles', 'without_smiles'

@@ -1,0 +1,92 @@
+
+# Precursor candidate retrieval — correctness checks.
+#
+# Kept separate from ci.yml on purpose. ci.yml is a PACKAGING workflow: it builds a
+# wheel, installs it across four Python versions and pulls in PyTorch, which takes
+# minutes. The tests here exercise pure numpy/pandas/rdkit logic, need no models and no
+# reference database, and finish in seconds — so they can run on every push to this
+# branch without waiting on a matrix build, and they give a clear signal about the one
+# thing this branch changes.
+#
+# The defects under test all reached a release:
+#   * the reference rounded and the query truncated, so the exact-bucket `==` failed
+#     whenever the 4th decimal digit was >= 5 — half of all compounds
+#   * a 3-decimal bucket is +/-0.0005 Da, narrower than any instrument's mass accuracy
+#   * spectra with no candidate were dropped from the output with no row and no warning
+name: Precursor matching
+
+on:
+  push:
+    branches:
+      - main
+      - 'fix/precursor-**'
+    paths:
+      - 'src/chemembed/reference_utils.py'
+      - 'src/chemembed/chemembed_by_file.py'
+      - 'src/chemembed/chemembed_single_file.py'
+      - 'src/chemembed/cli.py'
+      - 'tests/test_precursor_matching.py'
+      - '.github/workflows/precursor-matching.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  matching:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.12']   # the declared floor and ceiling
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Deliberately NOT installing the package: torch is ~800 MB of wheels and none of
+      # these tests touch it. Importing chemembed.reference_utils directly off src/ is
+      # enough, and keeps the job under a minute.
+      - name: Install the matching dependencies only
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas rdkit pytest
+
+      - name: Precursor matching tests
+        env:
+          PYTHONPATH: src
+        run: pytest tests/test_precursor_matching.py -v
+
+      # A guard rather than a test: the fixed code path must be what runs by default.
+      # 1.1.1 shipped the ppm window already implemented but defaulting to 0, so every
+      # user got the broken filter and no one could tell.
+      - name: The default tolerance must not be the legacy bucket
+        env:
+          PYTHONPATH: src
+        run: |
+          python - <<'PY'
+          import inspect
+          from chemembed.reference_utils import (
+              DEFAULT_PRECURSOR_TOLERANCE_PPM,
+              match_predictions_to_reference_with_smiles,
+              match_predictions_to_reference_without_smiles,
+          )
+
+          assert DEFAULT_PRECURSOR_TOLERANCE_PPM > 0, (
+              "DEFAULT_PRECURSOR_TOLERANCE_PPM is 0, which selects the legacy "
+              "exact-bucket filter for every user who does not set it explicitly")
+
+          for fn in (match_predictions_to_reference_with_smiles,
+                     match_predictions_to_reference_without_smiles):
+              default = inspect.signature(fn).parameters['tol_ppm'].default
+              assert default == DEFAULT_PRECURSOR_TOLERANCE_PPM, (
+                  f"{fn.__name__} defaults tol_ppm to {default}, not the package default")
+              print(f"  ok  {fn.__name__} defaults to {default} ppm")
+          PY
