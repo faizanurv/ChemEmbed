@@ -2,6 +2,7 @@
 
 import argparse
 from .chemembed_single_file import run
+from .reference_utils import DEFAULT_PRECURSOR_TOLERANCE_PPM
 
 
 def main():
@@ -28,6 +29,13 @@ def main():
     parser.add_argument('--resolution', type=float, default =0.01, help='Resolution.')
     parser.add_argument('--max_mz', type=float, default =700, help='Max MZ.')
     parser.add_argument('--top_n_candidates', type=int, default =5, help='Top N candidates.')
+    parser.add_argument('--precursor_tolerance_ppm', type=float,
+                        default=DEFAULT_PRECURSOR_TOLERANCE_PPM,
+                        help='Precursor mass tolerance in ppm for candidate retrieval '
+                             '(5 is typical for Orbitrap, 10-20 for QTOF). '
+                             '0 selects the legacy exact 3-decimal bucket, which misses '
+                             'about half of all correct candidates; use it only to '
+                             'reproduce pre-1.2.0 results.')
 
     # outputs
     parser.add_argument('--preprocessed_data', type=str, default='preprocessed_data.pkl', help='Path to save preprocessed data as pkl file.')

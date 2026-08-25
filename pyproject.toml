@@ -46,6 +46,19 @@ dependencies = [
     "tqdm>=4.0.0",
 ]
 
+[project.optional-dependencies]
+# Reading a .parquet reference database. Not a default dependency because the .pkl
+# form works without it, so a plain install stays lean.
+parquet = ["pyarrow>=8"]
+
+# The batch entry point (chemembed.chemembed_by_file) searches the whole embedding
+# space with FAISS before filtering by precursor mass, which is worthwhile when
+# annotating many samples at once. faiss-cpu is what PyPI can install; the GPU build
+# comes from conda (`conda install -c pytorch faiss-gpu`) and is the one you want on a
+# GPU node. The default single-file path does NOT need FAISS: it filters by precursor
+# mass first, which leaves a handful of candidates to score directly.
+faiss = ["faiss-cpu>=1.7"]
+
 [project.urls]
 Homepage = "https://github.com/faizanurv/ChemEmbed"
 Repository = "https://github.com/faizanurv/ChemEmbed"

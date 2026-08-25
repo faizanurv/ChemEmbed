@@ -17,6 +17,7 @@ from .model_utils import (
 )
 
 from .reference_utils import (
+    DEFAULT_PRECURSOR_TOLERANCE_PPM,
     load_reference_database_with_smiles,
     load_reference_database_without_smiles,
     match_predictions_to_reference_with_smiles,
@@ -76,8 +77,11 @@ def run(config: dict):
     # Load and preprocess reference database
     reference_df = reference_loader_fn(config['reference_database'], adduct)
 
-    # Match predictions to reference database
-    final_results_df = matcher_fn(prediction_df, reference_df, config['top_n_candidates'], input_type, adduct)
+    # Match predictions to reference database. 0 selects the legacy exact-bucket filter;
+    # anything else is a ppm window. See reference_utils._candidate_positions.
+    tol_ppm = config.get('precursor_tolerance_ppm', DEFAULT_PRECURSOR_TOLERANCE_PPM)
+    final_results_df = matcher_fn(prediction_df, reference_df, config['top_n_candidates'],
+                                  input_type, adduct, tol_ppm)
 
     # Save final results
     final_results_df.to_csv(config['prediction_results'], index=False)

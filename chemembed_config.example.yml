@@ -31,11 +31,22 @@ model_path_negative: /path/to/data_model_files/model_negative.bin
 reference_database: /path/to/data_model_files/chemembed_reference_mol2vec_300d_520k.parquet
 
 # ── Processing parameters ────────────────────────────────────────────────────
-tolerance: 0.01
+tolerance: 0.01              # PEAK binning tolerance in Da. This does NOT affect
+                             # precursor candidate retrieval — see below.
 max_mz: 700
 resolution: 0.01
 intensity_threshold: 1
 top_n_candidates: 5
+
+# Precursor mass tolerance for candidate retrieval, in ppm. Reference compounds within
+# this window of the measured precursor become candidates and are scored by cosine.
+#   5      typical for Orbitrap
+#   10-20  typical for QTOF
+#   0      the legacy exact 3-decimal-bucket filter. That bucket is +/-0.0005 Da, about
+#          1.2 ppm at m/z 400 — narrower than any real instrument — and the reference
+#          rounds while the query truncated, so it missed roughly half of all correct
+#          candidates even on exact masses. Use 0 only to reproduce pre-1.2.0 results.
+precursor_tolerance_ppm: 5.0
 
 # ── Performance (FAISS GPU edition) ──────────────────────────────────────────
 batch_size: 32     # CNN inference batch size; raise to 64/128 if the GPU has memory
