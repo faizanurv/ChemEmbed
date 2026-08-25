@@ -99,3 +99,82 @@ jobs:
           regex: '/^Release: #{semver}$/i'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The release body comes from CHANGELOG.md, which records what CHANGED and
+      # therefore never mentions the models or the reference database. Those are
+      # published once on v1.0.1 and not re-attached to code releases, so a reader who
+      # lands on the newest release — which is what `releases/latest` points at — is
+      # given no route to the 3.3 GB they need in order to run anything. Append a
+      # standing pointer to every release so that route always exists.
+      - name: Append the data-download section to the release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          REPO: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import json, os, re, urllib.request
+
+          version = re.match(r"Release:\s*v?(\S+)",
+                             os.environ["COMMIT_MESSAGE"].strip().splitlines()[0]).group(1)
+          tag = f"v{version}"
+          repo = os.environ["REPO"]
+          token = os.environ["GH_TOKEN"]
+
+          def api(path, method="GET", payload=None):
+              req = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}{path}", method=method,
+                  data=json.dumps(payload).encode() if payload else None,
+                  headers={"Authorization": f"Bearer {token}",
+                           "Accept": "application/vnd.github+json",
+                           "Content-Type": "application/json"})
+              return json.load(urllib.request.urlopen(req))
+
+          release = api(f"/releases/tags/{tag}")
+          body = release.get("body") or ""
+
+          MARKER = "## Models and reference database"
+          if MARKER in body:
+              print("pointer already present, nothing to do")
+              raise SystemExit(0)
+
+          footer = f"""
+
+          ---
+
+          {MARKER}
+
+          The trained models and the reference database are **not** attached to this
+          release. They change on their own schedule, far less often than the code, so
+          they are published once and code releases do not re-upload 3.3 GB to keep a
+          copy alongside them.
+
+          Download them from the [v1.0.1 release](https://github.com/{repo}/releases/tag/v1.0.1):
+
+          | File | Size | Purpose |
+          | --- | --- | --- |
+          | `model_positive.bin` | 1129.6 MB | CNN weights, positive mode (`[M+H]+`) |
+          | `model_negative.bin` | 1129.6 MB | CNN weights, negative mode (`[M-H]-`) |
+          | `chemembed_reference_mol2vec_300d_520k.parquet` | 542.5 MB | 520,083 compounds, 300-dim mol2vec embeddings |
+          | `chemembed_reference_mol2vec_300d_520k.pkl` | 705.6 MB | the same database as pickle, if you would rather not install `pyarrow` |
+
+          You need one reference database, not both.
+
+          ```bash
+          pip install chemembed=={version}
+
+          mkdir -p data_model_files && cd data_model_files
+          BASE=https://github.com/{repo}/releases/download/v1.0.1
+          curl -LO $BASE/model_positive.bin
+          curl -LO $BASE/chemembed_reference_mol2vec_300d_520k.parquet
+          ```
+
+          Checksums and the full setup are in the
+          [README](https://github.com/{repo}#models-and-reference-database).
+          """
+          footer = "\n".join(line[10:] if line.startswith(" " * 10) else line
+                             for line in footer.splitlines())
+
+          api(f"/releases/{release['id']}", "PATCH", {"body": body.rstrip() + footer})
+          print(f"appended data-download pointer to {tag}")
+          PY
